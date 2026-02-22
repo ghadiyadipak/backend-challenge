@@ -13,322 +13,489 @@ This repository demonstrates a backend architecture that handles asynchronous ta
 - Implement a `TaskRunner` that executes jobs associated with tasks and manages task and workflow states.
 - Run tasks asynchronously using a background worker.
 
+---
+
+## ✅ Implementation Complete
+
+All 6 challenge tasks have been implemented and tested:
+
+| # | Task | Status |
+|---|------|--------|
+| 1 | PolygonAreaJob - Calculate polygon area | ✅ Done |
+| 2 | ReportGenerationJob - Aggregate task outputs | ✅ Done |
+| 3 | Task Dependencies - Support `dependsOn` in YAML | ✅ Done |
+| 4 | Final Workflow Results - Save aggregated results | ✅ Done |
+| 5 | GET /workflow/:id/status - Status endpoint | ✅ Done |
+| 6 | GET /workflow/:id/results - Results endpoint | ✅ Done |
+
+---
+
 ## Key Features
 
 1. **Entity Modeling with TypeORM**
-
-   - **Task Entity:** Represents an individual unit of work with attributes like `taskType`, `status`, `progress`, and references to a `Workflow`.
-   - **Workflow Entity:** Groups multiple tasks into a defined sequence or steps, allowing complex multi-step processes.
+   - **Task Entity:** Represents an individual unit of work with attributes like `taskType`, `status`, `progress`, `stepId`, `dependsOn`, and references to a `Workflow`.
+   - **Workflow Entity:** Groups multiple tasks into a defined sequence with `finalResult` for aggregated outputs.
 
 2. **Workflow Creation from YAML**
-
    - Use `WorkflowFactory` to load workflow definitions from a YAML file.
-   - Dynamically create workflows and tasks without code changes by updating YAML files.
+   - Support for task dependencies via `dependsOn` field.
 
 3. **Asynchronous Task Execution**
-
    - A background worker (`taskWorker`) continuously polls for `queued` tasks.
-   - The `TaskRunner` runs the appropriate job based on a task’s `taskType`.
+   - Tasks only execute when all dependencies are completed.
 
 4. **Robust Status Management**
+   - `TaskRunner` updates task status (queued → in_progress → completed/failed).
+   - Workflow status is evaluated after each task completes.
+   - Final results are aggregated when workflow completes.
 
-   - `TaskRunner` updates the status of tasks (from `queued` to `in_progress`, `completed`, or `failed`).
-   - Workflow status is evaluated after each task completes, ensuring you know when the entire workflow is `completed` or `failed`.
+5. **Available Jobs**
+   - `polygonArea` - Calculates polygon area using @turf/area
+   - `analysis` - Determines which country a polygon is within
+   - `report` - Generates aggregated report from all task outputs
+   - `notification` - Sends email notifications
 
-5. **Dependency Injection and Decoupling**
-   - `TaskRunner` takes in only the `Task` and determines the correct job internally.
-   - `TaskRunner` handles task state transitions, leaving the background worker clean and focused on orchestration.
+---
 
 ## Project Structure
 
 ```
 src
-├─ models/
-│   ├─ world_data.json  # Contains world data for analysis
+├─ data/
+│   └─ world_data.json        # Country boundary data for analysis
 │
 ├─ models/
-│   ├─ Result.ts        # Defines the Result entity
-│   ├─ Task.ts          # Defines the Task entity
-│   ├─ Workflow.ts      # Defines the Workflow entity
+│   ├─ Result.ts              # Result entity
+│   ├─ Task.ts                # Task entity (with stepId, dependsOn)
+│   └─ Workflow.ts            # Workflow entity (with finalResult)
 │
 ├─ jobs/
-│   ├─ Job.ts           # Job interface
-│   ├─ JobFactory.ts    # getJobForTaskType function for mapping taskType to a Job
-│   ├─ TaskRunner.ts    # Handles job execution & task/workflow state transitions
-│   ├─ DataAnalysisJob.ts (example)
-│   ├─ EmailNotificationJob.ts (example)
+│   ├─ Job.ts                 # Job interface
+│   ├─ JobFactory.ts          # Maps taskType to Job class
+│   ├─ DataAnalysisJob.ts     # Checks if polygon is within a country
+│   ├─ EmailNotificationJob.ts # Sends notifications
+│   ├─ PolygonAreaJob.ts      # ✅ NEW: Calculates polygon area
+│   └─ ReportGenerationJob.ts # ✅ NEW: Generates workflow report
 │
 ├─ workflows/
-│   ├─ WorkflowFactory.ts  # Creates workflows & tasks from a YAML definition
+│   ├─ WorkflowFactory.ts     # Creates workflows from YAML (with dependency parsing)
+│   └─ example_workflow.yml   # Workflow definition with dependencies
 │
 ├─ workers/
-│   ├─ taskWorker.ts    # Background worker that fetches queued tasks & runs them
+│   ├─ taskRunner.ts          # Executes jobs & aggregates final results
+│   └─ taskWorker.ts          # Background worker (respects dependencies)
 │
 ├─ routes/
-│   ├─ analysisRoutes.ts # POST /analysis endpoint to create workflows
+│   ├─ analysisRoutes.ts      # POST /analysis
+│   ├─ workflowRoutes.ts      # ✅ NEW: GET /workflow/:id/status & /results
+│   └─ defaultRoute.ts        # Default route
 │
-├─ data-source.ts       # TypeORM DataSource configuration
-└─ index.ts             # Express.js server initialization & starting the worker
+├─ __tests__/                 # ✅ NEW: Unit tests (41 tests)
+│   ├─ PolygonAreaJob.test.ts
+│   ├─ ReportGenerationJob.test.ts
+│   ├─ TaskDependencies.test.ts
+│   ├─ workflowRoutes.test.ts
+│   └─ analysisRoutes.test.ts
+│
+├─ data-source.ts             # TypeORM configuration
+└─ index.ts                   # Express server & worker initialization
 ```
 
-## Getting Started
+---
+
+## Installation & Running
 
 ### Prerequisites
-
 - Node.js (LTS recommended)
 - npm or yarn
-- SQLite or another supported database
+- SQLite (included)
 
 ### Installation
 
-1. **Clone the repository:**
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/backend-coding-challenge.git
+cd backend-coding-challenge
 
-   ```bash
-   git clone https://github.com/yourusername/backend-coding-challenge.git
-   cd backend-coding-challenge
-   ```
+# Install dependencies
+npm install
 
-2. **Install dependencies:**
+# Start the server
+npm start
+```
 
-   ```bash
-   npm install
-   ```
+The server will start at `http://localhost:3000`
 
-3. **Configure TypeORM:**
+### Running Tests
 
-   - Edit `data-source.ts` to ensure the `entities` array includes `Task` and `Workflow` entities.
-   - Confirm database settings (e.g. SQLite file path).
+```bash
+# Run all tests
+npm test
 
-4. **Create or Update the Workflow YAML:**
-   - Place a YAML file (e.g. `example_workflow.yml`) in a `workflows/` directory.
-   - Define steps, for example:
-     ```yaml
-     name: "example_workflow"
-     steps:
-       - taskType: "analysis"
-         stepNumber: 1
-       - taskType: "notification"
-         stepNumber: 2
-     ```
+# Run tests with coverage
+npm run test:coverage
 
-### Running the Application
+# Run tests in watch mode
+npm run test:watch
+```
 
-1. **Compile TypeScript (optional if using `ts-node`):**
+---
 
-   ```bash
-   npx tsc
-   ```
+## API Endpoints
 
-2. **Start the server:**
+### POST /analysis
+Creates a new workflow with tasks from the YAML definition.
 
-   ```bash
-   npm start
-   ```
-
-   If using `ts-node`, this will start the Express.js server and the background worker after database initialization.
-
-3. **Create a Workflow (e.g. via `/analysis`):**
-
-   ```bash
-   curl -X POST http://localhost:3000/analysis \
-   -H "Content-Type: application/json" \
-   -d '{
+**Request:**
+```bash
+curl -X POST http://localhost:3000/analysis \
+  -H "Content-Type: application/json" \
+  -d '{
     "clientId": "client123",
     "geoJson": {
-        "type": "Polygon",
-        "coordinates": [
-            [
-                [
-                    -63.624885020050996,
-                    -10.311050368263523
-                ],
-                [
-                    -63.624885020050996,
-                    -10.367865108370523
-                ],
-                [
-                    -63.61278302732815,
-                    -10.367865108370523
-                ],
-                [
-                    -63.61278302732815,
-                    -10.311050368263523
-                ],
-                [
-                    -63.624885020050996,
-                    -10.311050368263523
-                ]
-            ]
-        ]
+      "type": "Polygon",
+      "coordinates": [[
+        [-63.624885, -10.311050],
+        [-63.624885, -10.367865],
+        [-63.612783, -10.367865],
+        [-63.612783, -10.311050],
+        [-63.624885, -10.311050]
+      ]]
     }
-    }'
-   ```
+  }'
+```
 
-   This will read the configured workflow YAML, create a workflow and tasks, and queue them for processing.
+**Response (202 Accepted):**
+```json
+{
+  "workflowId": "e0abf30a-ee50-4ada-ba2f-40891d22c76c",
+  "message": "Workflow created and tasks queued from YAML definition."
+}
+```
 
-4. **Check Logs:**
-   - The worker picks up tasks from `queued` state.
-   - `TaskRunner` runs the corresponding job (e.g., data analysis, email notification) and updates states.
-   - Once tasks are done, the workflow is marked as `completed`.
-
-### **Coding Challenge Tasks for the Interviewee**
-
-The following tasks must be completed to enhance the backend system:
+**Validation Errors (400):**
+```json
+{ "error": "Invalid request", "message": "clientId is required and must be a string" }
+{ "error": "Invalid request", "message": "geoJson is required and must be a valid GeoJSON object" }
+{ "error": "Invalid GeoJSON", "message": "geoJson.type must be one of: Polygon, MultiPolygon, Feature, FeatureCollection" }
+```
 
 ---
+
+### GET /workflow/:id/status
+Returns the current status of a workflow including task progress.
+
+**Request:**
+```bash
+curl http://localhost:3000/workflow/{workflowId}/status
+```
+
+**Response (200 OK):**
+```json
+{
+  "workflowId": "e0abf30a-ee50-4ada-ba2f-40891d22c76c",
+  "status": "in_progress",
+  "completedTasks": 2,
+  "failedTasks": 0,
+  "inProgressTasks": 1,
+  "totalTasks": 4
+}
+```
+
+**Response (404 Not Found):**
+```json
+{
+  "error": "Workflow not found",
+  "workflowId": "invalid-id"
+}
+```
+
+---
+
+### GET /workflow/:id/results
+Returns the final results of a completed workflow.
+
+**Request:**
+```bash
+curl http://localhost:3000/workflow/{workflowId}/results
+```
+
+**Response (200 OK):**
+```json
+{
+  "workflowId": "e0abf30a-ee50-4ada-ba2f-40891d22c76c",
+  "status": "completed",
+  "finalResult": {
+    "workflowId": "e0abf30a-ee50-4ada-ba2f-40891d22c76c",
+    "clientId": "client123",
+    "status": "completed",
+    "completedAt": "2024-01-15T10:30:00Z",
+    "results": [
+      {
+        "taskId": "uuid",
+        "taskType": "polygonArea",
+        "stepNumber": 1,
+        "status": "completed",
+        "output": { "area": 8363324.27, "unit": "square meters" }
+      },
+      {
+        "taskId": "uuid",
+        "taskType": "analysis",
+        "stepNumber": 2,
+        "status": "completed",
+        "output": "Brazil"
+      },
+      {
+        "taskId": "uuid",
+        "taskType": "report",
+        "stepNumber": 3,
+        "status": "completed",
+        "output": { "workflowId": "...", "tasks": [...], "finalReport": "..." }
+      },
+      {
+        "taskId": "uuid",
+        "taskType": "notification",
+        "stepNumber": 4,
+        "status": "completed",
+        "output": {}
+      }
+    ],
+    "summary": { "total": 4, "completed": 4, "failed": 0 }
+  }
+}
+```
+
+**Response (400 Bad Request):**
+```json
+{
+  "error": "Workflow not yet completed",
+  "workflowId": "e0abf30a-ee50-4ada-ba2f-40891d22c76c",
+  "currentStatus": "in_progress"
+}
+```
+
+**Response (404 Not Found):**
+```json
+{
+  "error": "Workflow not found",
+  "workflowId": "invalid-id"
+}
+```
+
+---
+
+## Workflow YAML Format
+
+The workflow is defined in `src/workflows/example_workflow.yml`:
+
+```yaml
+name: "example_workflow"
+steps:
+  - id: "polygonArea"
+    taskType: "polygonArea"
+    stepNumber: 1
+  - id: "analysis"
+    taskType: "analysis"
+    stepNumber: 2
+  - id: "report"
+    taskType: "report"
+    stepNumber: 3
+    dependsOn:
+      - "polygonArea"
+      - "analysis"
+  - id: "notification"
+    taskType: "notification"
+    stepNumber: 4
+    dependsOn:
+      - "report"
+```
+
+### YAML Fields:
+| Field | Required | Description |
+|-------|----------|-------------|
+| `id` | No | Unique step identifier for dependency reference |
+| `taskType` | Yes | Type of job to execute |
+| `stepNumber` | Yes | Execution order |
+| `dependsOn` | No | Array of step IDs that must complete first |
+
+---
+
+## Task Execution Flow
+
+```
+┌─────────────────┐
+│ POST /analysis  │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ WorkflowFactory │ → Creates Workflow + 4 Tasks
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────┐
+│                    TASK WORKER                          │
+│  (Polls every 5 seconds for queued tasks)               │
+└─────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────┐
+│ Step 1: polygonArea                                     │
+│ - Calculates area: 8,363,324.27 sq meters               │
+└────────┬────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────┐
+│ Step 2: analysis                                        │
+│ - Determines country: "Brazil"                          │
+└────────┬────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────┐
+│ Step 3: report (waits for steps 1 & 2)                  │
+│ - Aggregates all task outputs into report               │
+└────────┬────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────┐
+│ Step 4: notification (waits for step 3)                 │
+│ - Sends email notification                              │
+└────────┬────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────┐
+│ WORKFLOW COMPLETE                                       │
+│ - finalResult saved with all task outputs               │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Testing with Postman
+
+A Postman collection is included: `postman_collection.json`
+
+### Import & Use:
+1. Open Postman
+2. Click **Import** → Select `postman_collection.json`
+3. Start the server: `npm start`
+4. Run requests in the collection
+
+### Collection Contents:
+- **1. Create Workflow** - Valid/invalid request tests
+- **2. Workflow Status** - Status endpoint tests
+- **3. Workflow Results** - Results endpoint tests
+- **4. Full Workflow Test** - End-to-end test flow
+
+---
+
+## Quick Test Script
+
+```bash
+# Start server
+npm start &
+
+# Wait for server to start
+sleep 3
+
+# Create workflow
+WORKFLOW_ID=$(curl -s -X POST http://localhost:3000/analysis \
+  -H "Content-Type: application/json" \
+  -d '{"clientId":"test","geoJson":{"type":"Polygon","coordinates":[[[-63.62,-10.31],[-63.62,-10.36],[-63.61,-10.36],[-63.61,-10.31],[-63.62,-10.31]]]}}' \
+  | grep -o '"workflowId":"[^"]*"' | cut -d'"' -f4)
+
+echo "Created workflow: $WORKFLOW_ID"
+
+# Check status
+curl -s http://localhost:3000/workflow/$WORKFLOW_ID/status
+
+# Wait for completion (~25 seconds)
+sleep 25
+
+# Get results
+curl -s http://localhost:3000/workflow/$WORKFLOW_ID/results
+```
+
+---
+
+## Implementation Details
+
+### 1. PolygonAreaJob (`src/jobs/PolygonAreaJob.ts`)
+- Uses `@turf/area` to calculate polygon area
+- Validates GeoJSON structure (Polygon/MultiPolygon)
+- Returns area in square meters
+- Handles invalid GeoJSON gracefully
+
+### 2. ReportGenerationJob (`src/jobs/ReportGenerationJob.ts`)
+- Aggregates outputs from all preceding tasks
+- Includes task status, output, and error information
+- Generates summary with completion statistics
+
+### 3. Task Dependencies (`src/models/Task.ts`, `src/workers/taskWorker.ts`)
+- `stepId` field for unique task identification
+- `dependsOn` field for comma-separated dependency list
+- Worker checks dependency status before executing tasks
+- Failed dependencies cascade to dependent tasks
+
+### 4. Final Workflow Results (`src/models/Workflow.ts`, `src/workers/taskRunner.ts`)
+- `finalResult` field on Workflow entity
+- Aggregated when workflow completes (success or failure)
+- Includes all task outputs and summary statistics
+
+### 5 & 6. Workflow Endpoints (`src/routes/workflowRoutes.ts`)
+- `GET /workflow/:id/status` - Returns status with task counts
+- `GET /workflow/:id/results` - Returns final results when complete
+- Proper error handling (404, 400)
+
+---
+
+## Unit Tests
+
+41 tests covering all implemented features:
+
+```
+src/__tests__/
+├─ PolygonAreaJob.test.ts      # 6 tests
+├─ ReportGenerationJob.test.ts # 4 tests
+├─ TaskDependencies.test.ts    # 15 tests
+├─ workflowRoutes.test.ts      # 8 tests
+└─ analysisRoutes.test.ts      # 8 tests
+```
+
+Run tests:
+```bash
+npm test
+```
+
+---
+
+## Original Challenge Requirements
+
+<details>
+<summary>Click to expand original challenge tasks</summary>
 
 ### **1. Add a New Job to Calculate Polygon Area**
-
-**Objective:**  
-Create a new job class to calculate the area of a polygon from the GeoJSON provided in the task.
-
-#### **Steps:**
-
-1. Create a new job file `PolygonAreaJob.ts` in the `src/jobs/` directory.
-2. Implement the `Job` interface in this new class.
-3. Use `@turf/area` to calculate the polygon area from the `geoJson` field in the task.
-4. Save the result in the `output` field of the task.
-
-#### **Requirements:**
-
-- The `output` should include the calculated area in square meters.
-- Ensure that the job handles invalid GeoJSON gracefully and marks the task as failed.
-
----
+**Objective:** Create a new job class to calculate the area of a polygon from the GeoJSON provided in the task.
 
 ### **2. Add a Job to Generate a Report**
-
-**Objective:**  
-Create a new job class to generate a report by aggregating the outputs of multiple tasks in the workflow.
-
-#### **Steps:**
-
-1. Create a new job file `ReportGenerationJob.ts` in the `src/jobs/` directory.
-2. Implement the `Job` interface in this new class.
-3. Aggregate outputs from all preceding tasks in the workflow into a JSON report. For example:
-   ```json
-   {
-     "workflowId": "<workflow-id>",
-     "tasks": [
-       { "taskId": "<task-1-id>", "type": "polygonArea", "output": "<area>" },
-       {
-         "taskId": "<task-2-id>",
-         "type": "dataAnalysis",
-         "output": "<analysis result>"
-       }
-     ],
-     "finalReport": "Aggregated data and results"
-   }
-   ```
-4. Save the report as the `output` of the `ReportGenerationJob`.
-
-#### **Requirements:**
-
-- Ensure the job runs only after all preceding tasks are complete.
-- Handle cases where tasks fail, and include error information in the report.
-
----
+**Objective:** Create a new job class to generate a report by aggregating the outputs of multiple tasks in the workflow.
 
 ### **3. Support Interdependent Tasks in Workflows**
-
-**Objective:**  
-Modify the system to support workflows with tasks that depend on the outputs of earlier tasks.
-
-#### **Steps:**
-
-1. Update the `Task` entity to include a `dependency` field that references another task
-2. Modify the `TaskRunner` to wait for dependent tasks to complete and pass their outputs as inputs to the current task.
-3. Extend the workflow YAML format to specify task dependencies (e.g., `dependsOn`).
-4. Update the `WorkflowFactory` to parse dependencies and create tasks accordingly.
-
-#### **Requirements:**
-
-- Ensure dependent tasks do not execute until their dependencies are completed.
-- Test workflows where tasks are chained through dependencies.
-
----
+**Objective:** Modify the system to support workflows with tasks that depend on the outputs of earlier tasks.
 
 ### **4. Ensure Final Workflow Results Are Properly Saved**
-
-**Objective:**  
-Save the aggregated results of all tasks in the workflow as the `finalResult` field of the `Workflow` entity.
-
-#### **Steps:**
-
-1. Modify the `Workflow` entity to include a `finalResult` field:
-2. Aggregate the outputs of all tasks in the workflow after the last task completes.
-3. Save the aggregated results in the `finalResult` field.
-
-#### **Requirements:**
-
-- The `finalResult` must include outputs from all completed tasks.
-- Handle cases where tasks fail, and include failure information in the final result.
-
----
+**Objective:** Save the aggregated results of all tasks in the workflow as the `finalResult` field of the `Workflow` entity.
 
 ### **5. Create an Endpoint for Getting Workflow Status**
-
-**Objective:**  
-Implement an API endpoint to retrieve the current status of a workflow.
-
-#### **Endpoint Specification:**
-
-- **URL:** `/workflow/:id/status`
-- **Method:** `GET`
-- **Response Example:**
-  ```json
-  {
-    "workflowId": "3433c76d-f226-4c91-afb5-7dfc7accab24",
-    "status": "in_progress",
-    "completedTasks": 3,
-    "totalTasks": 5
-  }
-  ```
-
-#### **Requirements:**
-
-- Include the number of completed tasks and the total number of tasks in the workflow.
-- Return a `404` response if the workflow ID does not exist.
-
----
+**Objective:** Implement an API endpoint to retrieve the current status of a workflow.
 
 ### **6. Create an Endpoint for Retrieving Workflow Results**
+**Objective:** Implement an API endpoint to retrieve the final results of a completed workflow.
 
-**Objective:**  
-Implement an API endpoint to retrieve the final results of a completed workflow.
-
-#### **Endpoint Specification:**
-
-- **URL:** `/workflow/:id/results`
-- **Method:** `GET`
-- **Response Example:**
-  ```json
-  {
-    "workflowId": "3433c76d-f226-4c91-afb5-7dfc7accab24",
-    "status": "completed",
-    "finalResult": "Aggregated workflow results go here"
-  }
-  ```
-
-#### **Requirements:**
-
-- Return the `finalResult` field of the workflow if it is completed.
-- Return a `404` response if the workflow ID does not exist.
-- Return a `400` response if the workflow is not yet completed.
+</details>
 
 ---
 
-### **Deliverables**
+## License
 
-- **Code Implementation:**
-
-  - New jobs: `PolygonAreaJob` and `ReportGenerationJob`.
-  - Enhanced workflow support for interdependent tasks.
-  - Workflow final results aggregation.
-  - New API endpoints for workflow status and results.
-
-- **Documentation:**
-  - Update the README file to include instructions for testing the new features.
-  - Document the API endpoints with request and response examples.
-
----
+This project is for interview/assessment purposes.
