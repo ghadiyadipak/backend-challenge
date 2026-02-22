@@ -1,0 +1,641 @@
+{
+  "info": {
+    "name": "Backend Challenge - Workflow API",
+    "description": "Postman collection to test all workflow scenarios for the backend coding challenge",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "workflowId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Create Workflow",
+      "item": [
+        {
+          "name": "1.1 Create Workflow - Valid Request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 202', function () {",
+                  "    pm.response.to.have.status(202);",
+                  "});",
+                  "",
+                  "pm.test('Response has workflowId', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('workflowId');",
+                  "    pm.collectionVariables.set('workflowId', jsonData.workflowId);",
+                  "});",
+                  "",
+                  "pm.test('Response has success message', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.include('Workflow created');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"clientId\": \"client123\",\n    \"geoJson\": {\n        \"type\": \"Polygon\",\n        \"coordinates\": [\n            [\n                [-63.624885020050996, -10.311050368263523],\n                [-63.624885020050996, -10.367865108370523],\n                [-63.61278302732815, -10.367865108370523],\n                [-63.61278302732815, -10.311050368263523],\n                [-63.624885020050996, -10.311050368263523]\n            ]\n        ]\n    }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/analysis",
+              "host": ["{{baseUrl}}"],
+              "path": ["analysis"]
+            },
+            "description": "Creates a new workflow with polygon GeoJSON. This will create 4 tasks:\n1. polygonArea - Calculate area\n2. analysis - Determine country\n3. report - Aggregate results\n4. notification - Send notification"
+          },
+          "response": []
+        },
+        {
+          "name": "1.2 Create Workflow - Missing clientId (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error message mentions clientId', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.include('clientId');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"geoJson\": {\n        \"type\": \"Polygon\",\n        \"coordinates\": []\n    }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/analysis",
+              "host": ["{{baseUrl}}"],
+              "path": ["analysis"]
+            },
+            "description": "Tests validation - should return 400 when clientId is missing"
+          },
+          "response": []
+        },
+        {
+          "name": "1.3 Create Workflow - Missing geoJson (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error message mentions geoJson', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.include('geoJson');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"clientId\": \"test-client\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/analysis",
+              "host": ["{{baseUrl}}"],
+              "path": ["analysis"]
+            },
+            "description": "Tests validation - should return 400 when geoJson is missing"
+          },
+          "response": []
+        },
+        {
+          "name": "1.4 Create Workflow - Invalid GeoJSON Type (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error is Invalid GeoJSON', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error).to.equal('Invalid GeoJSON');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"clientId\": \"test-client\",\n    \"geoJson\": {\n        \"type\": \"Point\",\n        \"coordinates\": [0, 0]\n    }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/analysis",
+              "host": ["{{baseUrl}}"],
+              "path": ["analysis"]
+            },
+            "description": "Tests validation - should return 400 for Point geometry (only Polygon/MultiPolygon/Feature/FeatureCollection allowed)"
+          },
+          "response": []
+        },
+        {
+          "name": "1.5 Create Workflow - Feature GeoJSON",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 202', function () {",
+                  "    pm.response.to.have.status(202);",
+                  "});",
+                  "",
+                  "pm.test('Response has workflowId', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('workflowId');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"clientId\": \"client-feature\",\n    \"geoJson\": {\n        \"type\": \"Feature\",\n        \"properties\": {},\n        \"geometry\": {\n            \"type\": \"Polygon\",\n            \"coordinates\": [\n                [\n                    [-63.624885, -10.311050],\n                    [-63.624885, -10.367865],\n                    [-63.612783, -10.367865],\n                    [-63.612783, -10.311050],\n                    [-63.624885, -10.311050]\n                ]\n            ]\n        }\n    }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/analysis",
+              "host": ["{{baseUrl}}"],
+              "path": ["analysis"]
+            },
+            "description": "Creates workflow with Feature GeoJSON type"
+          },
+          "response": []
+        },
+        {
+          "name": "1.6 Create Workflow - MultiPolygon GeoJSON",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 202', function () {",
+                  "    pm.response.to.have.status(202);",
+                  "});",
+                  "",
+                  "pm.test('Response has workflowId', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('workflowId');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"clientId\": \"client-multipolygon\",\n    \"geoJson\": {\n        \"type\": \"MultiPolygon\",\n        \"coordinates\": [\n            [\n                [\n                    [-63.624885, -10.311050],\n                    [-63.624885, -10.367865],\n                    [-63.612783, -10.367865],\n                    [-63.612783, -10.311050],\n                    [-63.624885, -10.311050]\n                ]\n            ]\n        ]\n    }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/analysis",
+              "host": ["{{baseUrl}}"],
+              "path": ["analysis"]
+            },
+            "description": "Creates workflow with MultiPolygon GeoJSON type"
+          },
+          "response": []
+        }
+      ],
+      "description": "Tests for POST /analysis endpoint"
+    },
+    {
+      "name": "2. Workflow Status",
+      "item": [
+        {
+          "name": "2.1 Get Workflow Status - Valid ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has required fields', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('workflowId');",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "    pm.expect(jsonData).to.have.property('completedTasks');",
+                  "    pm.expect(jsonData).to.have.property('totalTasks');",
+                  "});",
+                  "",
+                  "pm.test('Total tasks is 4', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.totalTasks).to.equal(4);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflow/{{workflowId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflow", "{{workflowId}}", "status"]
+            },
+            "description": "Gets the status of a workflow including task counts"
+          },
+          "response": []
+        },
+        {
+          "name": "2.2 Get Workflow Status - Invalid ID (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Error message is Workflow not found', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error).to.equal('Workflow not found');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflow/invalid-workflow-id/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflow", "invalid-workflow-id", "status"]
+            },
+            "description": "Tests 404 response for non-existent workflow"
+          },
+          "response": []
+        }
+      ],
+      "description": "Tests for GET /workflow/:id/status endpoint"
+    },
+    {
+      "name": "3. Workflow Results",
+      "item": [
+        {
+          "name": "3.1 Get Workflow Results - Completed",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has required fields', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('workflowId');",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "    pm.expect(jsonData).to.have.property('finalResult');",
+                  "});",
+                  "",
+                  "pm.test('Status is completed', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.equal('completed');",
+                  "});",
+                  "",
+                  "pm.test('Final result contains task results', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.finalResult).to.have.property('results');",
+                  "    pm.expect(jsonData.finalResult.results).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Polygon area was calculated', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var polygonTask = jsonData.finalResult.results.find(t => t.taskType === 'polygonArea');",
+                  "    pm.expect(polygonTask.output).to.have.property('area');",
+                  "    pm.expect(polygonTask.output.unit).to.equal('square meters');",
+                  "});",
+                  "",
+                  "pm.test('Analysis found Brazil', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var analysisTask = jsonData.finalResult.results.find(t => t.taskType === 'analysis');",
+                  "    pm.expect(analysisTask.output).to.equal('Brazil');",
+                  "});",
+                  "",
+                  "pm.test('Report was generated', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var reportTask = jsonData.finalResult.results.find(t => t.taskType === 'report');",
+                  "    pm.expect(reportTask.output).to.have.property('finalReport');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflow/{{workflowId}}/results",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflow", "{{workflowId}}", "results"]
+            },
+            "description": "Gets the final results of a completed workflow. Run this after waiting ~25 seconds for all tasks to complete."
+          },
+          "response": []
+        },
+        {
+          "name": "3.2 Get Workflow Results - Invalid ID (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Error message is Workflow not found', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error).to.equal('Workflow not found');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflow/invalid-workflow-id/results",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflow", "invalid-workflow-id", "results"]
+            },
+            "description": "Tests 404 response for non-existent workflow"
+          },
+          "response": []
+        },
+        {
+          "name": "3.3 Get Workflow Results - Not Complete (400)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// First create a new workflow",
+                  "pm.sendRequest({",
+                  "    url: pm.collectionVariables.get('baseUrl') + '/analysis',",
+                  "    method: 'POST',",
+                  "    header: { 'Content-Type': 'application/json' },",
+                  "    body: {",
+                  "        mode: 'raw',",
+                  "        raw: JSON.stringify({",
+                  "            clientId: 'test-incomplete',",
+                  "            geoJson: {",
+                  "                type: 'Polygon',",
+                  "                coordinates: [[[-63.62,-10.31],[-63.62,-10.36],[-63.61,-10.36],[-63.61,-10.31],[-63.62,-10.31]]]",
+                  "            }",
+                  "        })",
+                  "    }",
+                  "}, function (err, response) {",
+                  "    var jsonData = response.json();",
+                  "    pm.collectionVariables.set('incompleteWorkflowId', jsonData.workflowId);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error message indicates not completed', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error).to.equal('Workflow not yet completed');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflow/{{incompleteWorkflowId}}/results",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflow", "{{incompleteWorkflowId}}", "results"]
+            },
+            "description": "Tests 400 response when workflow is not yet completed. This creates a new workflow and immediately tries to get results."
+          },
+          "response": []
+        }
+      ],
+      "description": "Tests for GET /workflow/:id/results endpoint"
+    },
+    {
+      "name": "4. Full Workflow Test",
+      "item": [
+        {
+          "name": "4.1 Create and Monitor Workflow",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 202', function () {",
+                  "    pm.response.to.have.status(202);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('testWorkflowId', jsonData.workflowId);",
+                  "",
+                  "console.log('Workflow created: ' + jsonData.workflowId);",
+                  "console.log('Wait ~25 seconds for tasks to complete, then run the next requests.');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"clientId\": \"full-test-client\",\n    \"geoJson\": {\n        \"type\": \"Polygon\",\n        \"coordinates\": [\n            [\n                [-63.624885020050996, -10.311050368263523],\n                [-63.624885020050996, -10.367865108370523],\n                [-63.61278302732815, -10.367865108370523],\n                [-63.61278302732815, -10.311050368263523],\n                [-63.624885020050996, -10.311050368263523]\n            ]\n        ]\n    }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/analysis",
+              "host": ["{{baseUrl}}"],
+              "path": ["analysis"]
+            },
+            "description": "Step 1: Create a new workflow for full testing"
+          },
+          "response": []
+        },
+        {
+          "name": "4.2 Check Status (Poll)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "console.log('Status: ' + jsonData.status);",
+                  "console.log('Completed: ' + jsonData.completedTasks + '/' + jsonData.totalTasks);",
+                  "",
+                  "if (jsonData.status !== 'completed') {",
+                  "    console.log('Workflow not complete yet. Wait and retry.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflow/{{testWorkflowId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflow", "{{testWorkflowId}}", "status"]
+            },
+            "description": "Step 2: Poll this endpoint until status is 'completed'"
+          },
+          "response": []
+        },
+        {
+          "name": "4.3 Get Final Results",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('All tasks completed', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.finalResult.summary.completed).to.equal(4);",
+                  "    pm.expect(jsonData.finalResult.summary.failed).to.equal(0);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "console.log('=== FINAL RESULTS ===');",
+                  "console.log('Polygon Area: ' + jsonData.finalResult.results[0].output.area + ' sq meters');",
+                  "console.log('Country: ' + jsonData.finalResult.results[1].output);",
+                  "console.log('Report Generated: ' + (jsonData.finalResult.results[2].output.finalReport ? 'Yes' : 'No'));",
+                  "console.log('Notification Sent: ' + (jsonData.finalResult.results[3].status === 'completed' ? 'Yes' : 'No'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workflow/{{testWorkflowId}}/results",
+              "host": ["{{baseUrl}}"],
+              "path": ["workflow", "{{testWorkflowId}}", "results"]
+            },
+            "description": "Step 3: Get final results after workflow completes"
+          },
+          "response": []
+        }
+      ],
+      "description": "Full end-to-end workflow test. Run requests in order:\n1. Create workflow\n2. Poll status (wait ~25 seconds)\n3. Get final results"
+    }
+  ]
+}
